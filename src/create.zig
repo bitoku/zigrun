@@ -2,7 +2,6 @@ const std = @import("std");
 const Options = @import("struct.zig").Options;
 const container_dir = @import("util.zig").container_dir;
 const container_status_path = @import("util.zig").container_status_path;
-const openOrCreateFile = @import("util.zig").openOrCreateFile;
 
 pub fn run(container_id: []const u8, options: *const Options) !void {
     std.debug.print("Creating container {s} in {s}\n", .{ container_id, options.root });

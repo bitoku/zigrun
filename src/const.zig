@@ -1,0 +1,1 @@
+pub const default_root = "/run/zigrun";

@@ -1,46 +1,38 @@
 //! By convention, main.zig is where your main function lives in the case that
 //! you are building an executable. If you are making a library, the convention
 //! is to delete this file and start with root.zig instead.
+const std = @import("std");
+const state = @import("state.zig");
+const create = @import("create.zig");
+const Options = @import("struct.zig").Options;
+const constants = @import("const.zig");
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    // Check if the user has provided a command
+    if (std.os.argv.len <= 2) {
+        std.debug.print("Usage: {s} <command> <container_id> [options]\n", .{std.os.argv[0]});
+        std.os.linux.exit(1);
+    }
+    const command = std.mem.span(std.os.argv[1]);
+    const container_id = std.mem.span(std.os.argv[2]);
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
-
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
-
-    try bw.flush(); // Don't forget to flush!
-}
-
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
-
-test "use other module" {
-    try std.testing.expectEqual(@as(i32, 150), lib.add(100, 50));
-}
-
-test "fuzz example" {
-    const Context = struct {
-        fn testOne(context: @This(), input: []const u8) anyerror!void {
-            _ = context;
-            // Try passing `--fuzz` to `zig build test` and see if it manages to fail this test case!
-            try std.testing.expect(!std.mem.eql(u8, "canyoufindme", input));
-        }
+    var options = Options{
+        .root = constants.default_root,
     };
-    try std.testing.fuzz(Context{}, Context.testOne, .{});
+
+    for (std.os.argv) |arg| {
+        const arg_str = std.mem.span(arg);
+        if (std.mem.eql(u8, arg_str, "--root")) {
+            options.root = arg_str;
+        }
+    }
+
+    if (std.mem.eql(u8, command, "state")) {
+        try state.run(container_id, &options);
+    } else if (std.mem.eql(u8, command, "create")) {
+        try create.run(container_id, &options);
+    } else {
+        std.debug.print("Unknown command: {s}\n", .{command});
+        std.os.linux.exit(1);
+    }
 }
-
-const std = @import("std");
-
-/// This imports the separate module containing `root.zig`. Take a look in `build.zig` for details.
-const lib = @import("zigrun_lib");
